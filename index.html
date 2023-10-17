@@ -63,21 +63,44 @@
         }
 
         /* 单选框 */
+        .radio-content {
+            position: relative;
+            margin-top: 5px;
+        }
+
         .custom-radio {
             display: inline-flex;
             align-items: center;
             margin: 5px 0;
         }
 
+        .custom-radio-q {
+            position: relative;
+        }
+
+        .custom-radio-q span {
+            cursor: pointer;
+            display: inline-block;
+            font-weight: 900;
+            font-size: 12px;
+            width: 15px;
+            height: 15px;
+            line-height: 15px;
+            border: 2px solid;
+            border-radius: 100%;
+        }
+
+        .custom-radio-q:hover .radio-example {
+            display: block;
+        }
+
         .custom-radio input[type="radio"] {
             display: none;
-            /* 隐藏默认的单选按钮 */
         }
 
         .custom-radio label {
             position: relative;
             padding-left: 25px;
-            /* 留出空间放置自定义的单选按钮图标 */
             cursor: pointer;
         }
 
@@ -95,90 +118,119 @@
 
         .custom-radio input[type="radio"]:checked+label:before {
             background-color: #007bff;
-            /* 选中时的背景颜色 */
             border-color: #007bff;
-            /* 选中时的边框颜色 */
+        }
+
+        .radio-example {
+            position: absolute;
+            display: none;
+            top: -100px;
+            padding: 20px;
+            border: 1px solid #999;
+            border-radius: 5px;
+            position: absolute;
+            text-align: left;
+            left: 50px
+        }
+
+        .radio-example img {
+            width: 14vw;
         }
     </style>
 </head>
 
 <body>
-    <div class="notice">照片由左向右拼接</div>
+    <div class="notice"></div>
     <div class="image-content">
         <div class="file-select-area">
             <input type="file" class="input-file" id="imageFolderInput" webkitdirectory directory multiple>
-            <label for="imageFolderInput">选择文件</label>
+            <label for="imageFolderInput" title="选择一个文件名称连续的文件夹目录">选择文件夹</label>
         </div>
         <div id="selectedFileName"></div>
-        <button id="processButton">处理图像</button>
-        <div>
+        <button id="processButton" title="芜湖起飞!">处理图像</button>
+        <div class="radio-content">
             <div class="custom-radio">
-                <input type="radio" id="ascending" checked name="custom-radio">
-                <label for="ascending ">升序</label>
+                <input type="radio" id="ascending" checked name="order" value="ascending">
+                <label for="ascending">升序</label>
             </div>
             <div class="custom-radio">
-                <input type="radio" id="descending" name="custom-radio">
+                <input type="radio" id="descending" name="order" value="descending">
                 <label for="descending">降序</label>
+            </div>
+            <div class="custom-radio custom-radio-q">
+                <span class="">?</span>
+                <div class="radio-example">
+                    <div>升序</div>
+                    <img src="./images/dayToNight-asc.jpg" alt="">
+                    <div>降序</div>
+                    <img src="./images/dayToNight-desc.jpg" alt="">
+                </div>
             </div>
         </div>
         <div id="errMsg"></div>
         <div id="timeDom"></div>
         <div id="output-res"></div>
-        <img class="preview" id="preview" alt="">
+        <img class="preview" id="preview">
     </div>
     <script src="https://cdn.jsdelivr.net/npm/jimp@0.22.10/browser/lib/jimp.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/jimp/0.22.10/jimp.min.js"></script>
     <script>
-        let status = true
-        let second = 0
-        let startTime = 0
-        let out = document.getElementById('output-res')
-        let preview = document.getElementById('preview')
-        const selectedFileName = document.getElementById("selectedFileName");
+        let status = true;
+        let startTime = '';
+        const notPictureStr = '请选择一个包含图像文件的文件夹';
+        const hasOtherLibStr = '目录中包含非图像资源,请检查';
+        let out = document.getElementById('output-res');
         const fileInput = document.getElementById("imageFolderInput");
-        document.getElementById("processButton").addEventListener("click", processImages);
-
-
+        processButton.addEventListener("click", processImages);
         fileInput.addEventListener("change", function () {
-            const fileName = this.files;
-            errMsg.innerText = ''
-            status = true
-            selectedFileName.textContent = `已选择${this.files.length}个文件`
-
+            errMsg.innerText = '';
+            status = true;
+            selectedFileName.textContent = `已选择${this.files.length}个文件`;
         });
 
+        /**
+         * @desc 处理图像方法
+         *
+         */
         async function processImages() {
             if (!status) {
-                return
-            }
-
-            status = false
-            startTime = new Date()
-            calculationTime()
-            const imageFolderInput = document.getElementById("imageFolderInput");
-            let files
-            if (ascending.checked) {
-                files = sortFilesNumerically(imageFolderInput.files);
-            } else {
-                files = sortFilesNumerically(imageFolderInput.files, 'descending');
-            }
-            const totalCount = files.length
-            errMsg.innerText = ''
-
-            if (files.length === 0) {
-                console.error("请选择一个包含图像文件的文件夹");
-                errMsg.innerText = '请选择一个包含图像文件的文件夹'
                 return;
             }
 
+            const imageFolderInput = document.getElementById("imageFolderInput");
+            let files = imageFolderInput.files;
+            const totalCount = files.length;
+            const checkStatus = !!checkFileList(files).length;
+            if (totalCount === 0) {
+                console.error(notPictureStr);
+                errMsg.innerText = notPictureStr;
+                return;
+            }
+
+            if (checkStatus) {
+                console.error(hasOtherLibStr);
+                errMsg.innerText = hasOtherLibStr;
+                return;
+            }
+
+            if (ascending.checked) {
+                files = sortFilesNumerically(files);
+            } else {
+                files = sortFilesNumerically(files, 'descending');
+            }
+
+            errMsg.innerText = '';
+            status = false;
+            startTime = new Date();
             let {
                 width,
                 height
-            } = await getImageParamWidthFile(files[0])
+            } = await getImageParamWidthFile(files[0]);
 
             // 创建一个空白的最终图像
             const finalWidth = width || 6000;
             const finalHeight = height || 4000;
-            const singleImageWidth = finalWidth / totalCount
+            const singleImageWidth = finalWidth / totalCount;
             const finalImage = new Jimp(finalWidth, finalHeight, 0xFFFFFFFF);
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
@@ -189,18 +241,17 @@
                     out.innerText = (`第${index + 1}张, ${fixed((index+1), totalCount)}`);
                     image.crop(index * singleImageWidth, 0, singleImageWidth, 4000);
                     finalImage.blit(image, index * singleImageWidth, 0);
-                    let src = await finalImage.getBase64Async(Jimp.MIME_JPEG)
-                    preview.setAttribute('src', src)
+                    let src = await finalImage.getBase64Async(Jimp.MIME_JPEG);
+                    preview.setAttribute('src', src);
                 }
             }
 
             // 保存最终图像
             const finalImageDataURL = await finalImage.getBase64Async(Jimp.MIME_JPEG);
-            window.finalImageDataURL = finalImageDataURL
+            window.finalImageDataURL = finalImageDataURL;
             downloadFile(finalImageDataURL, "dayToNight.jpg");
             out.innerText = '处理完成,' + calculationTime();
-            second = 0
-            status = true
+            status = true;
         }
 
         function readImageFile(file) {
@@ -212,29 +263,31 @@
             });
         }
 
+        /**
+         * @desc 获取图像宽度高度
+         * 
+         */
         function getImageParamWidthFile(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = (event) => {
-
                     const img = new Image();
                     img.src = event.target.result;
                     img.onload = function () {
-                        const width = img.width;
                         resolve({
                             width: img.width,
                             height: img.height
                         })
-
                     };
-
                 };
                 reader.onerror = reject;
                 reader.readAsDataURL(file);
-
             });
         }
 
+        /**
+         * @desc 下载文件
+         */
         function downloadFile(dataURL, fileName = 'dayToNight.jpg') {
             const a = document.createElement("a");
             a.href = dataURL;
@@ -244,7 +297,11 @@
             a.click();
             document.body.removeChild(a);
         }
-
+        /**
+         * @desc 对读取到的目录文件进行排序
+         * 默认情况下排序是 1 10 100 1000...
+         * 
+         */
         function sortFilesNumerically(files, type) {
             const fileArray = Array.from(files);
             return fileArray.sort((a, b) => {
@@ -254,7 +311,6 @@
                     return numB - numA;
                 } else {
                     return numA - numB;
-
                 }
             });
         }
@@ -263,17 +319,23 @@
          * @desc 保留2位小数
          */
         function fixed(numerator, denominator) {
-            return (numerator / denominator * 100).toFixed(2) + '%'
+            return (numerator / denominator * 100).toFixed(2) + '%';
         }
 
         /**
          * @desc 计算时间
          */
         function calculationTime() {
-            let second = parseInt((new Date().getTime() - startTime.getTime()) / 1000)
-            let m = parseInt(second / 60)
-            let s = second % 60
-            return '任务总用时' + m + '分' + s + '秒'
+            let second = parseInt((new Date().getTime() - startTime.getTime()) / 1000);
+            let m = parseInt(second / 60);
+            let s = second % 60;
+            return '任务总用时' + m + '分' + s + '秒';
+        }
+
+        function checkFileList(files) {
+            return Array.from(files).filter(file => {
+                return file.type !== "image/jpeg" && file.type !== "image/png";
+            })
         }
     </script>
 </body>
